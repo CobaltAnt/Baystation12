@@ -34,10 +34,12 @@
 	else
 		return null
 
+//return flags that should be added to the viewer's sight var. 
+//Otherwise return a negative number to indicate that the view should be cancelled.
 /atom/proc/check_eye(user as mob)
 	if (istype(user, /mob/living/silicon/ai)) // WHYYYY
-		return 1
-	return
+		return 0
+	return -1
 
 /atom/proc/on_reagent_change()
 	return
@@ -201,9 +203,7 @@ its easier to just keep the beam vertical.
 			f_name += "oil-stained [name][infix]."
 
 	user << "\icon[src] That's [f_name] [suffix]"
-
-	if(desc)
-		user << desc
+	user << desc
 
 	return distance == -1 || (get_dist(src, user) <= distance)
 
@@ -409,6 +409,7 @@ its easier to just keep the beam vertical.
 
 
 /atom/proc/clean_blood()
+	src.color = initial(src.color) //paint
 	src.germ_level = 0
 	if(istype(blood_DNA, /list))
 		del(blood_DNA)

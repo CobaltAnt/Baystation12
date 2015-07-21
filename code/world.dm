@@ -55,7 +55,7 @@ var/global/datum/global_init/init = new ()
 	// Set up roundstart seed list. This is here because vendors were
 	// bugging out and not populating with the correct packet names
 	// due to this list not being instantiated.
-	populate_seed_list()
+	plant_controller = new()
 
 	// Create autolathe recipes, as above.
 	populate_lathe_recipes()
@@ -156,9 +156,10 @@ var/world_topic_spam_protect_time = world.timeofday
 			return "Bad Key"
 
 		var/client/C
+		var/req_ckey = ckey(input["adminmsg"])
 
 		for(var/client/K in clients)
-			if(K.ckey == input["adminmsg"])
+			if(K.ckey == req_ckey)
 				C = K
 				break
 		if(!C)
@@ -199,10 +200,28 @@ var/world_topic_spam_protect_time = world.timeofday
 			world_topic_spam_protect_ip = addr
 			return "Bad Key"
 
-		return show_player_info_irc(input["notes"])
+		return show_player_info_irc(ckey(input["notes"]))
 
+	else if(copytext(T,1,4) == "age")
+		var/input[] = params2list(T)
+		if(input["key"] != config.comms_password)
+			if(world_topic_spam_protect_ip == addr && abs(world_topic_spam_protect_time - world.time) < 50)
+				spawn(50)
+					world_topic_spam_protect_time = world.time
+					return "Bad Key (Throttled)"
 
+			world_topic_spam_protect_time = world.time
+			world_topic_spam_protect_ip = addr
+			return "Bad Key"
 
+		var/age = get_player_age(input["age"])
+		if(isnum(age))
+			if(age >= 0)
+				return "[age]"
+			else
+				return "Ckey not found"
+		else
+			return "Database connection failed or not set up"
 
 
 /world/Reboot(var/reason)
@@ -265,6 +284,7 @@ var/world_topic_spam_protect_time = world.timeofday
 
 /hook/startup/proc/loadMods()
 	world.load_mods()
+	world.load_mentors() // no need to write another hook.
 	return 1
 
 /world/proc/load_mods()
@@ -282,7 +302,26 @@ var/world_topic_spam_protect_time = world.timeofday
 					continue
 
 				var/title = "Moderator"
-				if(config.mods_are_mentors) title = "Mentor"
+				var/rights = admin_ranks[title]
+
+				var/ckey = copytext(line, 1, length(line)+1)
+				var/datum/admins/D = new /datum/admins(title, rights, ckey)
+				D.associate(directory[ckey])
+
+/world/proc/load_mentors()
+	if(config.admin_legacy_system)
+		var/text = file2text("config/mentors.txt")
+		if (!text)
+			error("Failed to load config/mentors.txt")
+		else
+			var/list/lines = text2list(text, "\n")
+			for(var/line in lines)
+				if (!line)
+					continue
+				if (copytext(line, 1, 2) == ";")
+					continue
+
+				var/title = "Mentor"
 				var/rights = admin_ranks[title]
 
 				var/ckey = copytext(line, 1, length(line)+1)

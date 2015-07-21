@@ -23,8 +23,9 @@
 
 	var/message_mode = parse_message_mode(message, "headset")
 
-	if(copytext(message,1,2) == "*")
-		return emote(copytext(message,2))
+	switch(copytext(message,1,2))
+		if("*") return emote(copytext(message,2))
+		if("^") return custom_emote(1, copytext(message,2))
 
 	if(name != GetVoice())
 		alt_name = "(as [get_id_name("Unknown")])"
@@ -64,7 +65,7 @@
 
 	if(speech_problem_flag)
 		if(!speaking || !(speaking.flags & NO_STUTTER))
-			var/list/handle_r = handle_speech_problems(message)
+			var/list/handle_r = handle_speech_problems(message, verb)
 			message = handle_r[1]
 			verb = handle_r[2]
 			speech_problem_flag = handle_r[3]
@@ -113,9 +114,11 @@
 				used_radios += R
 
 		if("intercom")
-			for(var/obj/item/device/radio/intercom/I in view(1, null))
-				I.talk_into(src, message, verb, speaking)
-				used_radios += I
+			if(!src.restrained())
+				for(var/obj/item/device/radio/intercom/I in view(1))
+					I.talk_into(src, message, null, verb, speaking)
+					I.add_fingerprint(src)
+					used_radios += I
 		if("whisper")
 			whisper_say(message, speaking, alt_name)
 			return
@@ -270,10 +273,9 @@
 
 	return verb
 
-/mob/living/carbon/human/proc/handle_speech_problems(var/message)
+/mob/living/carbon/human/proc/handle_speech_problems(var/message, var/verb = "says")
 
 	var/list/returns[3]
-	var/verb = "says"
 	var/handled = 0
 	if(silent || (sdisabilities & MUTE))
 		message = ""

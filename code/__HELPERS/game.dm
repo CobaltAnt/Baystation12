@@ -9,11 +9,18 @@
 	src:Topic(href, href_list)
 	return null
 
+/proc/is_on_same_plane_or_station(var/z1, var/z2)
+	if(z1 == z2)
+		return 1
+	if((z1 in config.station_levels) &&	(z2 in config.station_levels))
+		return 1
+	return 0
+
 /proc/get_area(O)
 	var/turf/loc = get_turf(O)
-	if(!loc)
-		return null
-	return loc.loc
+	if(loc)
+		var/area/res = loc.loc
+		.= res.master
 
 /proc/get_area_name(N) //get area by its name
 	for(var/area/A in world)
@@ -53,18 +60,6 @@
 
 /proc/isNotAdminLevel(var/level)
 	return !isAdminLevel(level)
-
-//Magic constants obtained by using linear regression on right-angled triangles of sides 0<x<1, 0<y<1
-//They should approximate pythagoras theorem well enough for our needs.
-#define k1 0.934
-#define k2 0.427
-/proc/cheap_hypotenuse(Ax,Ay,Bx,By) // T is just the second atom to check distance to center with
-	var/dx = abs(Ax - Bx)	//sides of right-angled triangle
-	var/dy = abs(Ay - By)
-	if(dx>=dy)	return (k1*dx) + (k2*dy)	//No sqrt or powers :)
-	else		return (k2*dx) + (k1*dy)
-#undef k1
-#undef k2
 
 /proc/circlerange(center=usr,radius=3)
 
@@ -484,5 +479,8 @@ datum/projectile_data
 		temps[direction] = rstats
 	return temps
 
-/proc/MinutesToTicks(var/minutes as num)
-	return minutes * 60 * 10
+/proc/MinutesToTicks(var/minutes)
+	return SecondsToTicks(60 * minutes)
+
+/proc/SecondsToTicks(var/seconds)
+	return seconds * 10
